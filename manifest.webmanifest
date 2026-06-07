@@ -1,0 +1,16 @@
+{
+  "name": "Diagnóstico de Estudos",
+  "short_name": "Estudos AGU",
+  "description": "Painel de desempenho nos estudos para as Carreiras AGU.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDEBDF",
+  "theme_color": "#3C573F",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
