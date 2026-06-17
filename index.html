@@ -359,8 +359,7 @@
   <!-- 6 · REVISÕES -->
   <section id="sec-rev">
     <div class="h2"><span class="tag">Revisões</span></div>
-    <p class="lede">Revisão espaçada: cada assunto é reagendado a partir do último estudo (7 → 15 → 30 → 60 → 90 dias).</p>
-    <div class="secttl">Para revisar agora</div>
+<p class="lede">Revisão por desempenho: o intervalo depende do acerto do último estudo (60–69% → 4d · 70–79% → 7d · 80–85% → 15d · acima de 85% → 30d).</p>    <div class="secttl">Para revisar agora</div>
     <div id="revDue"></div>
     <div class="secttl">Próximas</div>
     <div id="revUp"></div>
@@ -694,7 +693,13 @@ document.getElementById('themeToggle').onclick=()=>{
 };
 
 /* ====================== REVISÕES ====================== */
-const REV_INTERVALS=[7,15,30,60,90]; // dias até a próxima revisão conforme nº de revisões já feitas
+function intervaloRevisao(acerto){
+  if(acerto>85) return 30;   // acima de 85%
+  if(acerto>=80) return 15;  // 80–85%
+  if(acerto>=70) return 7;   // 70–79%
+  if(acerto>=60) return 4;   // 60–69%
+  return 2;                  // abaixo de 60% — revisar logo (ajuste se quiser)
+}
 function startOfDay(d){const x=new Date(d);x.setHours(0,0,0,0);return x;}
 function reviewQueue(){
   const m={};
@@ -711,8 +716,7 @@ function reviewQueue(){
     if(!dated.length) return;
     const last=dated[dated.length-1];
     const revCount=g.entries.filter(e=>/revis/i.test(e.tipo||'')).length;
-    const idx=Math.min(revCount,REV_INTERVALS.length-1);
-    const next=startOfDay(last.dt); next.setDate(next.getDate()+REV_INTERVALS[idx]);
+    const next=startOfDay(last.dt); next.setDate(next.getDate()+intervaloRevisao(last.e.acerto));
     const dueDays=Math.round((today-next)/86400000);          // >=0 vencido
     const sinceLast=Math.round((today-startOfDay(last.dt))/86400000);
     out.push({disc:g.disc,assunto:g.assunto,revCount,dueDays,sinceLast,
