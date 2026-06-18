@@ -1,6 +1,6 @@
 /* Service worker do Estuda — habilita instalação como app e funcionamento offline.
    Ao mudar arquivos, troque 'estuda-v1' por 'estuda-v2' para forçar atualização. */
-const CACHE = 'estuda-v3';
+const CACHE = 'estuda-v4';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png',
