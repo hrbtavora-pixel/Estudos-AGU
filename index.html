@@ -514,7 +514,8 @@ function renderAll(){ renderVisao(); renderDiag(); renderRank(); renderDisc(); r
 
 function renderVisao(){
   const totalQ=dadosRaw.reduce((s,r)=>s+(+r.q||0),0);
-  const totalAcc=dados.reduce((s,d)=>s+(d.acerto/100*d.q),0);  // usa o último acerto de cada assunto  const acerto=totalQ?totalAcc/totalQ*100:0;
+  const totalAcc=dados.reduce((s,d)=>s+(d.acerto/100*d.q),0);  // usa o último acerto de cada assunto  
+  const acerto=totalQ?totalAcc/totalQ*100:0;
   const dias=new Set(dadosRaw.map(r=>r.data).filter(Boolean)).size;
   const porDia=dias?totalQ/dias:null;
 
