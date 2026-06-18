@@ -490,7 +490,7 @@ async function init(){
     dados=aggregate(dadosRaw);
     if(dados.length===0){ showEmpty(); return; }
     mountUI(); renderAll();
-  }catch(err){ showError(err.message); }
+  }catch(err){ console.error('ERRO REAL:', err); showError(err.message); }
 }
 function showSetup(){ document.getElementById('content').innerHTML=
   `<div class="state"><h3>Falta um passo</h3><p>Substitua <code>COLE_AQUI_A_URL_DO_APP_DA_WEB</code> pela URL do seu App da Web (a mesma de antes). Veja a explicação na conversa.</p></div>`; }
