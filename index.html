@@ -491,6 +491,7 @@ function byDiscipline(){
   });
   return Object.values(m).map(x=>({disc:x.disc,q:x.q,acerto:x.q?x.soma/x.q*100:0,items:x.items}));
 }
+  
 
 /* ====================== INIT ====================== */
 async function init(){
