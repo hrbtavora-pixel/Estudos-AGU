@@ -252,6 +252,7 @@
   .rev-badge.ret-up{background:rgba(60,87,63,.14);color:var(--good);}
   .rev-badge.ret-dn{background:rgba(201,139,67,.16);color:var(--warn);}
   .rev-btn{flex-shrink:0;background:var(--accent);color:#3a2c08;border:none;font-family:'Roboto';font-weight:700;font-size:.74rem;padding:10px 15px;border-radius:999px;cursor:pointer;transition:transform .15s;}
+  .rev-restart{background:transparent;border:1px solid var(--line);color:var(--muted);font-family:'Roboto';font-weight:600;font-size:.58rem;letter-spacing:.04em;padding:4px 9px;border-radius:999px;cursor:pointer;}
   .rev-btn:active{transform:scale(.93);}
   .rev-empty{padding:18px;text-align:center;color:var(--muted);font-size:.82rem;line-height:1.5;}
 
@@ -321,7 +322,7 @@
   <!-- 2 · DIAGNÓSTICO -->
   <section id="sec-diag">
     <div class="h2"><span class="tag">Diagnóstico</span></div>
-    <p class="lede">Ranqueado por <b style="color:var(--accent)">oportunidade</b> = baixo acerto × peso da frente. É onde cada hora rende mais.</p>
+    <p class="lede">Ranqueado por <b style="color:var(--accent)">prioridade</b> = baixo acerto × peso da matéria no edital (estatística PGEs 2015–2021). É onde cada hora rende mais pontos.</p>
     <div class="block focus"><div class="block-head"><span class="pill red">Concentrar energia</span></div><div id="focusList"></div></div>
     <div class="insight" style="margin-bottom:16px" id="insightFocus"></div>
     <div class="block save"><div class="block-head"><span class="pill grn">Economizar energia</span></div><div id="saveList"></div></div>
@@ -373,7 +374,7 @@
   <!-- 6 · REVISÕES -->
   <section id="sec-rev">
     <div class="h2"><span class="tag">Revisões</span></div>
-<p class="lede">Revisão por desempenho: o intervalo depende do acerto do último estudo (60–69% → 4d · 70–79% → 7d · 80–85% → 15d · acima de 85% → 30d).</p>    <div class="secttl">Para revisar agora</div>
+<p class="lede">Revisão por desempenho: o intervalo depende do acerto do último estudo (60–69% → 5d · 70–79% → 10d · 80–85% → 30d · acima de 85% → 60d).</p>    <div class="secttl">Para revisar agora</div>
     <div id="revDue"></div>
     <div class="secttl">Próximas</div>
     <div id="revUp"></div>
@@ -488,7 +489,6 @@ function byDiscipline(){
   });
   return Object.values(m).map(x=>({disc:x.disc,q:x.q,acerto:x.q?x.soma/x.q*100:0,items:x.items}));
 }
-  
 
 /* ====================== INIT ====================== */
 async function init(){
@@ -499,7 +499,7 @@ async function init(){
     dados=aggregate(dadosRaw);
     if(dados.length===0){ showEmpty(); return; }
     mountUI(); renderAll();
-  }catch(err){ console.error('ERRO REAL:', err); showError(err.message); }
+  }catch(err){ showError(err.message); }
 }
 function showSetup(){ document.getElementById('content').innerHTML=
   `<div class="state"><h3>Falta um passo</h3><p>Substitua <code>COLE_AQUI_A_URL_DO_APP_DA_WEB</code> pela URL do seu App da Web (a mesma de antes). Veja a explicação na conversa.</p></div>`; }
@@ -523,7 +523,7 @@ function renderAll(){ renderVisao(); renderDiag(); renderRank(); renderDisc(); r
 
 function renderVisao(){
   const totalQ=dadosRaw.reduce((s,r)=>s+(+r.q||0),0);
-  const totalAcc=dados.reduce((s,d)=>s+(d.acerto/100*d.q),0);  // usa o último acerto de cada assunto  
+  const totalAcc=dados.reduce((s,d)=>s+(d.acerto/100*d.q),0);  // usa o último acerto de cada assunto
   const acerto=totalQ?totalAcc/totalQ*100:0;
   const dias=new Set(dadosRaw.map(r=>r.data).filter(Boolean)).size;
   const porDia=dias?totalQ/dias:null;
@@ -562,21 +562,52 @@ function renderVisao(){
       <div class="val" style="color:${r.c}">${r.v}</div></div>`).join('');
 }
 
+// Pesos das matérias no edital — estatística PGEs 2015–2021 (e-book). Ordem: específico → geral.
+const MATERIA_PESOS=[
+  [['processual civil','processo civil'],13.98],
+  [['processual do trabalho','processo do trabalho'],4.03],
+  [['processual penal','processo penal'],0.81],
+  [['legislacao civil'],0.38],
+  [['legislacao penal'],0.93],
+  [['constitucional'],14.67],
+  [['administrativo'],14.65],
+  [['tributario'],12.59],
+  [['ambiental'],5.60],
+  [['financeiro'],4.63],
+  [['previdenciario'],4.05],
+  [['empresarial'],2.96],
+  [['consumidor'],0.62],
+  [['eleitoral'],0.30],
+  [['crianca','adolescente'],0.12],
+  [['notarial','registral'],0.10],
+  [['humanos'],0.71],
+  [['institucional'],1.35],
+  [['portugues'],2.01],
+  [['trabalho'],5.84],
+  [['penal'],2.20],
+  [['civil'],7.47],
+];
+function pesoMateria(disc){
+  const n=(disc||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for(const [keys,peso] of MATERIA_PESOS){ if(keys.some(k=>n.includes(k))) return peso; }
+  return 1; // matéria fora da lista do e-book — peso mínimo
+}
 function renderDiag(){
-  const focus=[...dados].sort((a,b)=>b.opp-a.opp).slice(0,3);
-  const save=[...dados].sort((a,b)=>b.acerto-a.acerto).slice(0,3);
+  const withP=dados.map(d=>{const peso=pesoMateria(d.disc);return {...d,peso,prio:(100-d.acerto)/100*peso};});
+  const focus=[...withP].sort((a,b)=>b.prio-a.prio).slice(0,3);
+  const save=[...withP].sort((a,b)=> b.acerto-a.acerto || a.peso-b.peso).slice(0,3);
   const cl=a=>`color:${bandColor(a)}`;
   document.getElementById('focusList').innerHTML=focus.map((d,i)=>`
     <div class="row"><div class="rank">${i+1}</div>
-      <div class="row-body"><div class="a">${d.assunto}</div><div class="d">${d.disc} · ${d.q} questões</div></div>
-      <div class="metric"><div class="v" style="${cl(d.acerto)}">${fmtPct(d.acerto)}%</div><div class="c">≈${d.opp} a recuperar</div></div></div>`).join('');
+      <div class="row-body"><div class="a">${d.assunto}</div><div class="d">${d.disc} · peso ${fmtPct(d.peso)}% no edital</div></div>
+      <div class="metric"><div class="v" style="${cl(d.acerto)}">${fmtPct(d.acerto)}%</div><div class="c">acerto atual</div></div></div>`).join('');
   document.getElementById('saveList').innerHTML=save.map(d=>`
     <div class="row"><div class="rank">★</div>
-      <div class="row-body"><div class="a">${d.assunto}</div><div class="d">${d.disc} · ${d.q} questões</div></div>
+      <div class="row-body"><div class="a">${d.assunto}</div><div class="d">${d.disc} · peso ${fmtPct(d.peso)}% no edital</div></div>
       <div class="metric"><div class="v" style="color:var(--good)">${fmtPct(d.acerto)}%</div><div class="c">manutenção</div></div></div>`).join('');
   const top=focus[0], best=save[0];
-  document.getElementById('insightFocus').innerHTML=top?`⚠️ <strong>${top.assunto}</strong> lidera: ${fmtPct(top.acerto)}% sobre ${top.q} questões — cerca de <b>${top.opp} pontos</b> a ganhar. Frente pesada merece prioridade mesmo com erro moderado.`:'';
-  document.getElementById('insightSave').innerHTML=best?`✅ Onde o acerto passa de 85% basta manutenção: revisão espaçada e poucas questões de reforço. <b>Realoque esse tempo</b> para as frentes em vermelho.`:'';
+  document.getElementById('insightFocus').innerHTML=top?`⚠️ <strong>${top.assunto}</strong> lidera a prioridade: peso <b>${fmtPct(top.peso)}%</b> no edital (PGEs) e acerto ${fmtPct(top.acerto)}%. Muito cobrado e ainda não dominado — onde o estudo rende mais pontos na prova.`:'';
+  document.getElementById('insightSave').innerHTML=best?`✅ Onde o acerto já está alto, basta manutenção: revisão espaçada e poucas questões de reforço. <b>Realoque esse tempo</b> para as frentes em vermelho, priorizando as de maior peso no edital.`:'';
 }
 
 function renderRank(){
@@ -673,7 +704,7 @@ function renderPie(){
 
 function renderLine(){
   const area=document.getElementById('lineArea'); if(!area) return;
-  const rows=filteredRaw().filter(r=>parseBR(r.data));
+  const rows=filteredRaw().filter(r=>parseBR(r.data) && (+r.q||0)>0);
   if(rows.length===0){ area.innerHTML=`<div class="empty-mini">Adicione registros com <b>data</b> para ver a evolução do acerto ao longo do tempo.</div>`; return; }
   const byDate={};
   rows.forEach(r=>{const k=r.data; if(!byDate[k]) byDate[k]={q:0,soma:0,dt:parseBR(r.data)}; byDate[k].q+=r.q; byDate[k].soma+=r.acerto/100*r.q;});
@@ -738,10 +769,10 @@ document.getElementById('themeToggle').onclick=()=>{
 
 /* ====================== REVISÕES ====================== */
 function intervaloRevisao(acerto){
-  if(acerto>85) return 30;   // acima de 85%
-  if(acerto>=80) return 15;  // 80–85%
-  if(acerto>=70) return 7;   // 70–79%
-  if(acerto>=60) return 4;   // 60–69%
+  if(acerto>85) return 60;   // acima de 85%
+  if(acerto>=80) return 30;  // 80–85%
+  if(acerto>=70) return 10;  // 70–79%
+  if(acerto>=60) return 5;   // 60–69%
   return 2;                  // abaixo de 60% — revisar logo (ajuste se quiser)
 }
 function startOfDay(d){const x=new Date(d);x.setHours(0,0,0,0);return x;}
@@ -790,7 +821,7 @@ function renderRev(){
       <div class="rev-main">
         <div class="rev-as">${x.assunto}</div>
         <div class="rev-meta">${x.disc} · há ${x.sinceLast}d · acerto ${fmtPct(x.lastAcerto)}%${x.revCount?` · ${x.revCount} rev.`:''}</div>
-        <div class="rev-badges">${late}${retentionBadge(x)}</div>
+        <div class="rev-badges">${late}${retentionBadge(x)}${showBtn?`<button class="rev-restart" data-disc="${encodeURIComponent(x.disc)}" data-assunto="${encodeURIComponent(x.assunto)}" data-ac="${x.lastAcerto}">↻ reiniciar</button>`:''}</div>
       </div>
       ${showBtn?`<button class="rev-btn" data-disc="${encodeURIComponent(x.disc)}" data-assunto="${encodeURIComponent(x.assunto)}">Revisar</button>`:''}
     </div>`;
@@ -803,6 +834,15 @@ function renderRev(){
 
   dueWrap.querySelectorAll('.rev-btn').forEach(b=>b.onclick=()=>
     openForm('review',{disc:decodeURIComponent(b.dataset.disc),assunto:decodeURIComponent(b.dataset.assunto)}));
+  dueWrap.querySelectorAll('.rev-restart').forEach(b=>b.onclick=async(ev)=>{
+    ev.stopPropagation();
+    if(!confirm('Reiniciar o prazo deste assunto? Registra uma revisão de hoje (sem novas questões) e reagenda a próxima a partir de agora.')) return;
+    const t=new Date(); const hoje=`${String(t.getDate()).padStart(2,'0')}/${String(t.getMonth()+1).padStart(2,'0')}/${t.getFullYear()}`;
+    try{
+      await saveToSheet({action:'add',disc:decodeURIComponent(b.dataset.disc),assunto:decodeURIComponent(b.dataset.assunto),data:hoje,q:0,acerto:parseFloat(b.dataset.ac)||0,tipo:'Revisão'});
+      showToast('Prazo reiniciado ✓'); await reloadData();
+    }catch(e){ showToast('Não consegui reiniciar agora'); }
+  });
 
   // Histórico (toque para editar)
   const rows=[...dadosRaw].map((r,i)=>({r,i,dt:parseBR(r.data)}))
